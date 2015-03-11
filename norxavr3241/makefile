@@ -7,8 +7,6 @@
 # Compiler & Compiler flags
 CC = avr-gcc
 CFLAGS = -Wall -mmcu=atmega2560 -O3 -DF_CPU=16000000
-TARGET = hex/norxtest
-SPEEDTEST = hex/speedtest
 
 # avr object copy settings
 AVROBJCOPY = avr-objcopy
@@ -16,53 +14,58 @@ AVROBJCOPY = avr-objcopy
 # avrdude settings
 AVRDUDE = avrdude
 DEVICE = /dev/ttyACM0
-DIR=
 AVRDUDE_FLAGS = -c stk500v2 -p atmega2560 -P $(DEVICE)
-AVRDUDE_WRITE_FLASH = -U flash:w:$(dir)$(TARGET).hex
 
 # source files from directory
-AVR_SRC = $(wildcard avr/*.c)
-NORX_SRC =  $(wildcard norx/*.c)
-ASM_SRC = $(wildcard norx/assembly/*.S)
-TARGET_SRC = norxtest.c
-SPEEDTEST_SRC = speedtest.c
+AVR_SRC = $(wildcard src/avr/*.c)
+NORX_SRC =  $(wildcard src/norx/*.c)
+ASM_SRC = $(wildcard src/norx/assembly/*.S)
+NORXTEST_SRC = src/norxtest.c $(AVR_SRC) $(NORX_SRC)
+SPEEDTEST_SRC = src/speedtest.c $(AVR_SRC) $(NORX_SRC)
 
-SRC = $(AVR_SRC) $(NORX_SRC) $(ASM_SRC)
+NORXTEST_OBJ = $(NORXTEST_SRC:src/%.c=obj/%.o) $(ASM_SRC:src/%.S=obj/%.o)
+SPEEDTEST_OBJ = $(SPEEDTEST_SRC:src/%.c=obj/%.o) $(ASM_SRC:src/%.S=obj/%.o)
 
 # header files
-AVR_HEADERS = $(wildcard avr/*.h)
-NORX_HEADERS = $(wildcard norx/*.h)
+AVR_HEADERS = $(wildcard src/avr/*.h)
+NORX_HEADERS = $(wildcard src/norx/*.h)
 HEADERS = $(AVR_HEADERS) $(NORX_HEADERS)
 
-all: $(TARGET).hex $(SPEEDTEST).hex
+all: hex/norxtest.hex hex/speedtest.hex
 
-$(TARGET).hex: $(SRC) $(HEADERS) $(TARGET_SRC)
-	$(CC) $(CFLAGS) $(SRC) $(TARGET_SRC) -o $(TARGET)
-	$(AVROBJCOPY) -O ihex -R .eeprom $(TARGET) $(TARGET).hex
-	
-$(SPEEDTEST).hex: $(SRC) $(SPEEDTEST_SRC)
-	$(CC) $(CFLAGS) $(SRC) $(SPEEDTEST_SRC) -o $(SPEEDTEST)
-	$(AVROBJCOPY) -O ihex -R eeprom $(SPEEDTEST) $(SPEEDTEST).hex
-
-norxtest: $(TARGET).hex
-	@$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)
+norxtest: hex/norxtest.hex
+	@$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:hex/norxtest.hex
 	@stty -F $(DEVICE) raw icanon eof \^d 38400
 	@echo "===== Output ====="
 	@cat < $(DEVICE)
 	
-
-speedtest: $(SPEEDTEST).hex
-	@$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$(SPEEDTEST).hex
+speedtest: hex/speedtest.hex
+	@$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:hex/speedtest.hex
 	@stty -F $(DEVICE) raw icanon eof \^d 38400
 	@echo "===== Speedtest ====="
 	@cat < $(DEVICE)
-
-
+	
+hex/norxtest.hex: $(NORXTEST_OBJ)
+	$(CC) $(CFLAGS) $(NORXTEST_OBJ) -o hex/norxtest
+	$(AVROBJCOPY) -O ihex -R .eeprom hex/norxtest hex/norxtest.hex
+	
+hex/speedtest.hex: $(SPEEDTEST_OBJ)
+	$(CC) $(CFLAGS) $(SRC) $(SPEEDTEST_OBJ) -o hex/speedtest
+	$(AVROBJCOPY) -O ihex -R eeprom hex/speedtest hex/speedtest.hex	
+	
+obj/%.o: src/%.S
+	$(CC) $(CFLAGS) -c -o $@ $<
+	
+obj/%.o: src/%.c $(HEADERS)
+	$(CC) $(CFLAGS) -c -o $@ $< 
+	
 .PHONY: clean
 .PHONY: all
 
 clean:
-	-rm $(TARGET)
-	-rm $(TARGET).hex
-	-rm $(SPEEDTEST)
-	-rm $(SPEEDTEST).hex
+	-rm hex/norxtest
+	-rm hex/norxtest.hex
+	-rm hex/speedtest
+	-rm hex/speedtest.hex
+	-rm $(NORXTEST_OBJ)
+	-rm obj/speedtest.o
