@@ -93,7 +93,9 @@ void speedtest_norx_parts()
     burn(state, 0, sizeof(norx_state_t));
     t7 = cpucycles();
     
+    (void) clen;
     unsigned long long overhead = t0 - t_start;
+    printllu(overhead);
     
     print("NORX parts and cycles (8-byte message):\n-----------------------------\n");
     
