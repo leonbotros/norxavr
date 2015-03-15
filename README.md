@@ -1,7 +1,7 @@
 # norxavr
 NORXAVR
 ==============
-This is an optimized version of NORX, an authenticated encryption algorithm (see https://norx.io/), for AVR microcontrollers. This implementation is specifically optimized for the ATmega family.
+This is an optimized version of NORX32, an authenticated encryption algorithm (see https://norx.io/), for AVR microcontrollers. This implementation is specifically optimized for the ATmega family.
 
 How to compile & run on Atmega2560 for Debian/Ubuntu
 --------------
